@@ -3,31 +3,75 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>🤠 西部牛仔拆賬簿</title>
+    <title>🤠 西部通緝令拆賬簿</title>
     
     <!-- 引入 React 和 ReactDOM -->
     <script src="https://unpkg.com/react@18/umd/react.production.min.js" crossorigin></script>
     <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js" crossorigin></script>
     
-    <!-- 引入 Babel 用於在瀏覽器編譯 JSX -->
+    <!-- 引入 Babel -->
     <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
     
     <!-- 引入 Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
-    
-    <!-- 引入 Lucide Icons -->
-    <script src="https://unpkg.com/lucide@latest"></script>
+
+    <!-- 引入 Google Fonts (西部字體 & 復古打字機字體) -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Courier+Prime:ital,wght@0,400;0,700;1,400&family=Rye&display=swap" rel="stylesheet">
+
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        rye: ['Rye', 'serif'],
+                        courier: ['"Courier Prime"', 'monospace'],
+                    },
+                    colors: {
+                        wood: '#2A1A14', // 深木色背景
+                        paper: '#E8D5A5', // 泛黃羊皮紙
+                        paperDark: '#D4B872', // 羊皮紙深色陰影
+                        ink: '#3E2723', // 深咖啡色墨水
+                        blood: '#8B0000', // 暗紅色(強調)
+                    }
+                }
+            }
+        }
+    </script>
 
     <style>
         body {
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-            -webkit-tap-highlight-color: transparent; /* 移除 iOS 點擊高亮 */
-            background-color: #F5F1E7;
-            overscroll-behavior-y: none; /* 防止 iOS 橡皮筋效應 */
+            background-color: #2A1A14;
+            /* 簡單的木紋背景替代方案 */
+            background-image: linear-gradient(45deg, #2A1A14 25%, #35221b 25%, #35221b 50%, #2A1A14 50%, #2A1A14 75%, #35221b 75%, #35221b 100%);
+            background-size: 20px 20px;
+            -webkit-tap-highlight-color: transparent;
+            overscroll-behavior-y: none;
+            color: #3E2723;
         }
-        /* 處理 iOS 底部安全距離 */
-        .pb-safe { padding-bottom: env(safe-area-inset-bottom, 20px); }
+        .pb-safe { padding-bottom: env(safe-area-inset-bottom, 24px); }
         .pt-safe { padding-top: env(safe-area-inset-top, 0px); }
+        
+        /* 羊皮紙通緝令卡片特效 */
+        .wanted-poster {
+            background-color: #E8D5A5;
+            box-shadow: inset 0 0 40px rgba(62, 39, 35, 0.4), 5px 5px 15px rgba(0,0,0,0.6);
+            border: 2px solid #3E2723;
+            position: relative;
+        }
+        
+        /* 通緝令內層雙線框 */
+        .wanted-inner-border {
+            border: 4px double #3E2723;
+        }
+
+        /* 隱藏 Chrome / Safari 數字輸入框的上下箭頭 */
+        input[type=number]::-webkit-inner-spin-button, 
+        input[type=number]::-webkit-outer-spin-button { 
+            -webkit-appearance: none; 
+            margin: 0; 
+        }
     </style>
 </head>
 <body>
@@ -36,19 +80,16 @@
     <script type="text/babel">
         const { useState, useEffect, useMemo } = React;
 
-        // --- Lucide React Icons 的替代方案 (使用原生 HTML SVG) ---
-        // 因為在純 HTML 中無法直接使用 lucide-react 元件，我們自己建立簡單的 SVG 元件
-        const IconUsers = () => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>;
-        const IconPlusCircle = ({size=24, className=""}) => <svg className={className} xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><path d="M8 12h8"/><path d="M12 8v8"/></svg>;
-        const IconList = () => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>;
-        const IconCalculator = () => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="4" y="2" width="16" height="20" rx="2"/><line x1="8" y1="6" x2="16" y2="6"/><line x1="16" y1="14" x2="16" y2="18"/><path d="M16 10h.01"/><path d="M12 10h.01"/><path d="M8 10h.01"/><path d="M8 14h.01"/><path d="M8 18h.01"/><path d="M12 14h.01"/><path d="M12 18h.01"/></svg>;
-        const IconHistory = () => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/><path d="M12 7v5l4 2"/></svg>;
-        const IconDownload = ({size=18}) => <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>;
-        const IconTrash2 = ({size=20}) => <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><line x1="10" y1="11" x2="10" y2="17"/><line x1="14" y1="11" x2="14" y2="17"/></svg>;
-        const IconCheckCircle2 = ({size=18, className=""}) => <svg className={className} xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><path d="m9 12 2 2 4-4"/></svg>;
-        const IconCircle = ({size=18, className=""}) => <svg className={className} xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/></svg>;
+        // --- 原生 SVG 圖示 (西部風格色調) ---
+        const IconUsers = ({color}) => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>;
+        const IconPlus = ({color, size=24}) => <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>;
+        const IconList = ({color}) => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>;
+        const IconBadge = ({color}) => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 2l3 6 6 1-4 4 1 6-6-3-6 3 1-6-4-4 6-1 3-6z"/></svg>;
+        const IconScroll = ({color}) => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>;
+        const IconTrash = ({size=20}) => <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><line x1="10" y1="11" x2="10" y2="17"/><line x1="14" y1="11" x2="14" y2="17"/></svg>;
+        const IconSquareCheck = ({size=18}) => <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><polyline points="9 12 12 15 16 9"/></svg>;
+        const IconSquare = ({size=18}) => <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/></svg>;
 
-        // --- 常數定義 ---
         const CURRENCIES = [
             { code: 'HKD', name: '港幣', rate: 1 },
             { code: 'JPY', name: '日圓', rate: 0.052 },
@@ -61,52 +102,76 @@
             { code: 'USD', name: '美金', rate: 7.8 },
             { code: 'VND', name: '越南盾', rate: 0.00031 },
             { code: 'CNY', name: '人民幣', rate: 1.08 },
-            { code: 'OTHER', name: '其他 (手動)', rate: 1 },
+            { code: 'OTHER', name: '其他(手動)', rate: 1 },
         ];
 
+        // 裝飾用圖釘元件
+        const Pins = () => (
+            <>
+                <div className="absolute top-3 left-3 w-3 h-3 bg-wood rounded-full shadow-inner border border-[#1a100c]"></div>
+                <div className="absolute top-3 right-3 w-3 h-3 bg-wood rounded-full shadow-inner border border-[#1a100c]"></div>
+                <div className="absolute bottom-3 left-3 w-3 h-3 bg-wood rounded-full shadow-inner border border-[#1a100c]"></div>
+                <div className="absolute bottom-3 right-3 w-3 h-3 bg-wood rounded-full shadow-inner border border-[#1a100c]"></div>
+            </>
+        );
+
         function App() {
-            // --- 狀態管理 ---
             const [activeTab, setActiveTab] = useState('friends');
             const [friends, setFriends] = useState(['', '']);
             const [expenses, setExpenses] = useState([]);
             const [history, setHistory] = useState([]);
 
-            // --- Modal 狀態 ---
             const [errorMessage, setErrorMessage] = useState('');
             const [showSaveModal, setShowSaveModal] = useState(false);
             const [saveName, setSaveName] = useState('');
             const [deleteConfirm, setDeleteConfirm] = useState(null);
 
-            // --- 初始化加載 LocalStorage ---
+            // --- 新增幫派(朋友列表)狀態 ---
+            const [savedGroups, setSavedGroups] = useState([]);
+            const [showGroupModal, setShowGroupModal] = useState(false);
+            const [groupName, setGroupName] = useState('');
+
+            // 記帳表單狀態
+            const [desc, setDesc] = useState('');
+            const [amount, setAmount] = useState('');
+            const [currency, setCurrency] = useState('HKD');
+            const [rate, setRate] = useState(1);
+            const [payers, setPayers] = useState([]);
+            const [splitters, setSplitters] = useState([]);
+
             useEffect(() => {
                 try {
-                    const savedFriends = localStorage.getItem('westernSplit_friends');
-                    const savedExpenses = localStorage.getItem('westernSplit_expenses');
-                    const savedHistory = localStorage.getItem('westernSplit_history');
-
+                    const savedFriends = localStorage.getItem('wantedSplit_friends');
+                    const savedExpenses = localStorage.getItem('wantedSplit_expenses');
+                    const savedHistory = localStorage.getItem('wantedSplit_history');
+                    const savedGroupsLocal = localStorage.getItem('wantedSplit_groups');
                     if (savedFriends) setFriends(JSON.parse(savedFriends));
                     if (savedExpenses) setExpenses(JSON.parse(savedExpenses));
                     if (savedHistory) setHistory(JSON.parse(savedHistory));
-                } catch (e) {
-                    console.error("無法讀取 LocalStorage", e);
-                }
+                    if (savedGroupsLocal) setSavedGroups(JSON.parse(savedGroupsLocal));
+                } catch (e) { console.error(e); }
             }, []);
 
-            // --- 儲存至 LocalStorage ---
             useEffect(() => {
                 try {
-                    localStorage.setItem('westernSplit_friends', JSON.stringify(friends));
-                    localStorage.setItem('westernSplit_expenses', JSON.stringify(expenses));
-                    localStorage.setItem('westernSplit_history', JSON.stringify(history));
-                } catch (e) {
-                    console.error("無法寫入 LocalStorage", e);
-                }
-            }, [friends, expenses, history]);
+                    localStorage.setItem('wantedSplit_friends', JSON.stringify(friends));
+                    localStorage.setItem('wantedSplit_expenses', JSON.stringify(expenses));
+                    localStorage.setItem('wantedSplit_history', JSON.stringify(history));
+                    localStorage.setItem('wantedSplit_groups', JSON.stringify(savedGroups));
+                } catch (e) { console.error(e); }
+            }, [friends, expenses, history, savedGroups]);
 
-            // --- 有效的朋友名單 (過濾空白) ---
             const validFriends = useMemo(() => friends.filter(f => f.trim() !== ''), [friends]);
+            const hasDuplicates = useMemo(() => validFriends.length !== new Set(validFriends).size, [validFriends]);
+            const hasExpenses = expenses.length > 0;
 
-            // --- 共用結算算法 ---
+            // 自動全選分擔人
+            useEffect(() => {
+                if (validFriends.length > 0 && splitters.length === 0 && activeTab === 'add') {
+                    setSplitters([...validFriends]);
+                }
+            }, [validFriends, activeTab, splitters.length]);
+
             const getSettlement = (expList, friendsList) => {
                 let balances = {};
                 friendsList.forEach(f => balances[f] = 0);
@@ -116,612 +181,546 @@
                     exp.splitters.forEach(f => {
                         if (balances[f] !== undefined) balances[f] -= share;
                     });
-
                     const paidShare = exp.payers.length > 0 ? (exp.hkdAmount / exp.payers.length) : 0;
                     exp.payers.forEach(f => {
                         if (balances[f] !== undefined) balances[f] += paidShare;
                     });
                 });
 
-                let debtors = [];
-                let creditors = [];
-                
+                let debtors = [], creditors = [];
                 Object.keys(balances).forEach(person => {
-                    const amount = balances[person];
-                    if (amount < -0.1) debtors.push({ person, amount: Math.abs(amount) });
-                    else if (amount > 0.1) creditors.push({ person, amount });
+                    const amt = balances[person];
+                    if (amt < -0.1) debtors.push({ person, amount: Math.abs(amt) });
+                    else if (amt > 0.1) creditors.push({ person, amount: amt });
                 });
 
                 debtors.sort((a, b) => b.amount - a.amount);
                 creditors.sort((a, b) => b.amount - a.amount);
 
-                let transactions = [];
-                let i = 0, j = 0;
-
+                let transactions = [], i = 0, j = 0;
                 while (i < debtors.length && j < creditors.length) {
-                    let debtor = debtors[i];
-                    let creditor = creditors[j];
+                    let debtor = debtors[i], creditor = creditors[j];
                     let minAmount = Math.min(debtor.amount, creditor.amount);
-
-                    transactions.push({
-                        from: debtor.person,
-                        to: creditor.person,
-                        amount: minAmount
-                    });
-
+                    transactions.push({ from: debtor.person, to: creditor.person, amount: minAmount });
                     debtor.amount -= minAmount;
                     creditor.amount -= minAmount;
-
                     if (debtor.amount < 0.1) i++;
                     if (creditor.amount < 0.1) j++;
                 }
-
-                return { balances, transactions };
+                return { transactions };
             };
 
-            // --- 介面組件 ---
+            // ==========================================
+            // 共用空白狀態提示 (防止頁面留空)
+            // ==========================================
+            const renderEmptyState = (title, message, btnText, targetTab) => (
+                <div className="wanted-poster m-4 p-4 mt-8 pb-8">
+                    <Pins />
+                    <div className="wanted-inner-border p-6 text-center h-full flex flex-col items-center justify-center min-h-[50vh]">
+                        <h2 className="font-rye text-4xl text-blood mb-4 border-b-2 border-blood border-dashed pb-2">{title}</h2>
+                        <p className="font-courier font-bold text-ink text-lg mb-8 whitespace-pre-wrap leading-relaxed">{message}</p>
+                        <button 
+                            onClick={() => { setActiveTab(targetTab); window.scrollTo(0,0); }} 
+                            className="font-rye text-xl bg-ink border-2 border-ink text-paper py-4 w-full shadow-[4px_4px_0_#2A1A14] active:translate-y-1 active:shadow-none transition-all"
+                        >
+                            {btnText}
+                        </button>
+                    </div>
+                </div>
+            );
 
-            // 1. 朋友設定介面
-            const FriendsSetup = () => {
-                const handleFriendChange = (index, value) => {
-                    const newFriends = [...friends];
-                    newFriends[index] = value;
-                    setFriends(newFriends);
-                };
+            // ==========================================
+            // 渲染函數
+            // ==========================================
 
-                const addFriend = () => {
-                    if (friends.length < 10) setFriends([...friends, '']);
-                };
-
-                const removeFriend = (index) => {
-                    if (friends.length > 2) {
-                        const newFriends = friends.filter((_, i) => i !== index);
-                        setFriends(newFriends);
-                    }
-                };
-
-                return (
-                    <div className="p-4 pb-24">
-                        <h2 className="text-2xl font-bold mb-4 text-[#5C4033] flex items-center">🤠 輸入牛仔名單</h2>
-                        <p className="text-sm text-[#8C7A6B] mb-4">最少 2 人，最多 10 人。準備好後就出發記帳！</p>
+            const renderFriendsSetup = () => (
+                <div className="wanted-poster m-4 p-4 mt-8 pb-8">
+                    <Pins />
+                    <div className="wanted-inner-border p-4 text-center h-full">
+                        {/* 第一頁標題加入 記帳通緝令 */}
+                        <h2 className="font-rye text-2xl tracking-widest text-ink mb-1">記帳通緝令</h2>
+                        <h2 className="font-rye text-5xl tracking-widest text-blood mb-6 border-b-[3px] border-ink pb-2">WANTED</h2>
                         
-                        <div className="space-y-3">
-                            {friends.map((friend, index) => (
-                                <div key={index} className="flex items-center space-x-2">
-                                    <span className="text-[#A89F91] font-bold w-6">{index + 1}.</span>
-                                    <input
-                                        type="text"
-                                        value={friend}
-                                        onChange={(e) => handleFriendChange(index, e.target.value)}
-                                        placeholder={`牛仔 ${index + 1}`}
-                                        className="flex-1 p-3 border-2 border-[#E6DCC8] bg-[#FCFAF8] rounded-xl focus:ring-0 focus:border-[#C86F5E] outline-none text-[#5C4033] placeholder-[#CBBBA0]"
-                                    />
-                                    {friends.length > 2 && (
-                                        <button onClick={() => removeFriend(index)} className="p-2 text-[#D9534F] rounded-full hover:bg-[#FCECEB]">
-                                            <IconTrash2 size={20} />
-                                        </button>
-                                    )}
+                        {hasExpenses && (
+                            <div className="bg-blood/10 border-2 border-blood text-blood p-3 font-bold mb-6 text-sm font-courier leading-relaxed">
+                                ⚠️ 懸賞進行中，名單已鎖定！<br/>為避免帳目混亂，請先完成「結算」或清空明細後，再修改名單或切換幫派。
+                            </div>
+                        )}
+
+                        {/* 幫派名冊 (朋友列表) 功能 */}
+                        <div className="bg-ink/5 p-3 border border-ink border-dashed mb-6 text-left">
+                            <h4 className="font-rye text-ink mb-2">GANGS (幫派名冊)</h4>
+                            {savedGroups.length > 0 ? (
+                                <div className="flex flex-wrap gap-2 mb-3">
+                                    {savedGroups.map(g => (
+                                        <div key={g.id} className="flex items-center bg-paper border border-ink">
+                                            <button 
+                                                onClick={() => {
+                                                    if (hasExpenses) {
+                                                        setErrorMessage("⚠️ 目前已有未結算的帳單，為避免帳目混亂，請先完成「結算」後再切換幫派！");
+                                                        return;
+                                                    }
+                                                    setFriends([...g.members, ''].slice(0, 10));
+                                                }} 
+                                                className={`px-2 py-1 text-sm font-bold text-ink transition-colors ${hasExpenses ? 'opacity-50' : 'active:bg-ink active:text-paper'}`}
+                                            >
+                                                {g.name}
+                                            </button>
+                                            <button onClick={() => setSavedGroups(savedGroups.filter(sg => sg.id !== g.id))} className="px-2 border-l border-ink text-blood active:bg-blood active:text-white">
+                                                ×
+                                            </button>
+                                        </div>
+                                    ))}
                                 </div>
-                            ))}
+                            ) : (
+                                <p className="text-xs font-courier text-ink/60 mb-3 font-bold">尚無幫派紀錄。</p>
+                            )}
+                            <button 
+                                onClick={() => setShowGroupModal(true)} 
+                                disabled={validFriends.length < 2 || hasDuplicates} 
+                                className="text-xs font-courier font-bold border border-ink px-2 py-1 text-ink active:bg-ink active:text-paper disabled:opacity-50"
+                            >
+                                + 將目前名單存為新幫派
+                            </button>
                         </div>
 
-                        {friends.length < 10 && (
+                        <h3 className="font-bold text-ink mb-6 text-sm">輸入通緝名單 (最少2人，最多10人)</h3>
+                        
+                        <div className="space-y-4 text-left font-courier font-bold">
+                            {friends.map((friend, index) => {
+                                const isDup = friend.trim() !== '' && friends.findIndex((f, i) => i !== index && f.trim() === friend.trim()) !== -1;
+                                return (
+                                    <div key={index}>
+                                        <div className="flex items-end space-x-2">
+                                            <span className="text-ink w-6 text-xl">#{index + 1}</span>
+                                            <input
+                                                type="text"
+                                                disabled={hasExpenses}
+                                                value={friend}
+                                                onChange={(e) => {
+                                                    const newFriends = [...friends];
+                                                    newFriends[index] = e.target.value;
+                                                    setFriends(newFriends);
+                                                }}
+                                                placeholder={`同伙名稱`}
+                                                className={`flex-1 bg-transparent border-b-2 ${isDup ? 'border-blood text-blood' : 'border-ink text-ink'} outline-none text-xl py-1 focus:bg-ink/5 transition-colors placeholder-ink/30 ${hasExpenses ? 'opacity-50' : ''}`}
+                                            />
+                                            {friends.length > 2 && !hasExpenses && (
+                                                <button onClick={() => setFriends(friends.filter((_, i) => i !== index))} className="text-blood pb-1">
+                                                    <IconTrash size={24} />
+                                                </button>
+                                            )}
+                                        </div>
+                                        {isDup && <div className="text-blood text-xs font-bold pl-8 mt-1">⚠️ 名字重複，請修改</div>}
+                                    </div>
+                                );
+                            })}
+                        </div>
+
+                        {friends.length < 10 && !hasExpenses && (
                             <button
-                                onClick={addFriend}
-                                className="mt-6 w-full py-3 border-2 border-dashed border-[#C86F5E] text-[#C86F5E] bg-[#FCFAF8] rounded-xl font-bold flex items-center justify-center space-x-2 active:bg-[#F5E6E3]"
+                                onClick={() => setFriends([...friends, ''])}
+                                className="mt-8 font-rye text-xl border-[3px] border-ink text-ink py-2 px-4 w-full flex items-center justify-center space-x-2 active:bg-ink active:text-paper transition-colors"
                             >
-                                <IconPlusCircle size={20} />
-                                <span>招募新夥伴</span>
+                                <IconPlus color="currentColor" />
+                                <span>招募新同伙</span>
                             </button>
                         )}
 
                         {validFriends.length >= 2 && (
                             <button
                                 onClick={() => { setActiveTab('add'); window.scrollTo(0,0); }}
-                                className="mt-4 w-full py-4 bg-[#C86F5E] text-white rounded-xl font-bold text-lg shadow-[0_4px_0_#A85A4A] active:translate-y-1 active:shadow-none transition-all"
+                                disabled={hasDuplicates}
+                                className={`mt-4 font-rye text-xl py-4 w-full transition-all border-2 ${hasDuplicates ? 'bg-ink/50 border-ink/50 text-paper/50' : 'bg-ink border-ink text-paper shadow-[4px_4px_0_#2A1A14] active:translate-y-1 active:shadow-none'}`}
                             >
-                                確認並開始記帳 🐎
+                                {hasDuplicates ? '請先修正重複名字' : (hasExpenses ? '繼續記帳 ➔' : '發佈通緝令 (開始記帳)')}
                             </button>
                         )}
                     </div>
-                );
-            };
+                </div>
+            );
 
-            // 2. 記帳介面
-            const AddExpense = () => {
-                const [desc, setDesc] = useState('');
-                const [amount, setAmount] = useState('');
-                const [currency, setCurrency] = useState('HKD');
-                const [rate, setRate] = useState(1);
-                const [payers, setPayers] = useState([]);
-                const [splitters, setSplitters] = useState([]);
-
-                useEffect(() => {
-                    if (validFriends.length > 0 && splitters.length === 0) {
-                        setSplitters([...validFriends]);
-                    }
-                }, [validFriends]);
-
-                const handleCurrencyChange = (e) => {
-                    const code = e.target.value;
-                    setCurrency(code);
-                    const selectedCur = CURRENCIES.find(c => c.code === code);
-                    if (selectedCur) setRate(selectedCur.rate);
-                };
-
-                const toggleSelection = (person, list, setList) => {
-                    if (list.includes(person)) {
-                        setList(list.filter(p => p !== person));
-                    } else {
-                        setList([...list, person]);
-                    }
-                };
-
-                const selectAll = (setList) => setList([...validFriends]);
+            const renderAddExpense = () => {
+                // 防呆：未入名單時顯示引導
+                if (validFriends.length < 2) {
+                    return renderEmptyState("ATTENTION!", "懸賞名單空空如也！\n請先前往招募最少兩名同伙。", "前往「名單」招募 ➔", "friends");
+                }
 
                 const handleSave = () => {
                     if (!desc || !amount || payers.length === 0 || splitters.length === 0) {
-                        setErrorMessage("請填妥所有資料（項目、金額、付錢人、分擔人）");
+                        setErrorMessage("資料不齊全！請填寫項目、金額、並選擇債主與欠債人。");
                         return;
                     }
-
                     const numAmount = parseFloat(amount);
                     const hkdAmount = numAmount * parseFloat(rate);
-
-                    const newExpense = {
-                        id: Date.now(),
-                        desc,
-                        amount: numAmount,
-                        currency,
-                        rate: parseFloat(rate),
-                        hkdAmount,
-                        payers,
-                        splitters,
-                        date: new Date().toLocaleString()
-                    };
-
-                    setExpenses([...expenses, newExpense]);
+                    setExpenses([...expenses, {
+                        id: Date.now(), desc, amount: numAmount, currency, rate: parseFloat(rate), hkdAmount, payers, splitters, date: new Date().toLocaleString()
+                    }]);
                     
-                    setDesc('');
-                    setAmount('');
+                    // 徹底重置表單，避免殘留
+                    setDesc(''); 
+                    setAmount(''); 
+                    setCurrency('HKD');
+                    setRate(1);
                     setPayers([]);
-                    setActiveTab('list');
-                    window.scrollTo(0, 0);
+                    setSplitters([...validFriends]);
+                    
+                    setActiveTab('list'); window.scrollTo(0, 0);
                 };
 
-                if (validFriends.length < 2) {
-                    return <div className="p-4 text-center text-[#8C7A6B] mt-10">🌵 請先在名單加入最少兩位牛仔。</div>;
-                }
+                const toggleSel = (person, list, setList) => {
+                    setList(list.includes(person) ? list.filter(p => p !== person) : [...list, person]);
+                };
 
                 return (
-                    <div className="p-4 pb-24 space-y-6 pt-safe">
-                        <h2 className="text-2xl font-bold text-[#5C4033] flex items-center">💰 記錄花費</h2>
+                    <div className="wanted-poster m-4 p-4 mt-8 pb-8">
+                        <Pins />
+                        <div className="wanted-inner-border p-4 h-full flex flex-col space-y-6">
+                            <h2 className="font-rye text-3xl tracking-widest text-center text-ink border-b-[3px] border-ink pb-2">懸賞紀錄</h2>
 
-                        {/* Q1 & Q2 */}
-                        <div className="space-y-4 bg-[#FCFAF8] p-5 rounded-2xl shadow-sm border border-[#E6DCC8]">
-                            <div>
-                                <label className="block text-sm font-bold text-[#8C7A6B] mb-2">洗咗去邊？ (項目)</label>
-                                <input type="text" value={desc} onChange={e => setDesc(e.target.value)} placeholder="例如：酒館晚餐、租馬匹" className="w-full p-3 border-2 border-[#E6DCC8] rounded-xl outline-none focus:border-[#C86F5E] bg-white text-[#5C4033] placeholder-[#CBBBA0]" />
-                                <div className="flex flex-wrap gap-2 mt-3">
-                                    {['早餐', '午餐', '晚餐', '下午茶', '宵夜', 'Coffee'].map(item => (
-                                        <button
-                                            key={item}
-                                            onClick={() => setDesc(item)}
-                                            className="px-3 py-1.5 bg-[#F5E6E3] border border-[#E6DCC8] rounded-full text-xs font-bold text-[#A85A4A] active:bg-[#EEDBCE] transition-colors"
-                                        >
-                                            {item}
-                                        </button>
-                                    ))}
+                            {/* Q1 & Q2 */}
+                            <div className="space-y-4 font-courier font-bold text-lg">
+                                <div>
+                                    <label className="block text-ink mb-1">任務/項目：</label>
+                                    <input type="text" value={desc} onChange={e => setDesc(e.target.value)} placeholder="例如: 購買馬匹..." className="w-full bg-transparent border-b-2 border-ink outline-none text-xl py-1 text-ink placeholder-ink/30 focus:bg-ink/5" />
+                                    <div className="flex flex-wrap gap-2 mt-3 font-sans">
+                                        {['早餐', '午餐', '晚餐', '下午茶', '宵夜', 'Coffee'].map(item => (
+                                            <button key={item} onClick={() => setDesc(item)} className="px-3 py-1 bg-ink/10 border border-ink/30 text-ink text-sm font-bold active:bg-ink/30">{item}</button>
+                                        ))}
+                                    </div>
+                                </div>
+                                <div>
+                                    <label className="block text-ink mb-1">賞金 (金額)：</label>
+                                    <input type="number" inputMode="decimal" value={amount} onChange={e => setAmount(e.target.value)} placeholder="0.00" className="w-full bg-transparent border-b-2 border-ink outline-none text-3xl py-1 text-ink placeholder-ink/30 focus:bg-ink/5" />
                                 </div>
                             </div>
-                            <div>
-                                <label className="block text-sm font-bold text-[#8C7A6B] mb-2">幾多錢？</label>
-                                <input type="number" inputMode="decimal" value={amount} onChange={e => setAmount(e.target.value)} placeholder="0.00" className="w-full p-3 border-2 border-[#E6DCC8] rounded-xl outline-none focus:border-[#C86F5E] bg-white text-xl font-bold text-[#5C4033] placeholder-[#CBBBA0]" />
-                            </div>
-                        </div>
 
-                        {/* Q3: Currency */}
-                        <div className="space-y-3 bg-[#FCFAF8] p-5 rounded-2xl shadow-sm border border-[#E6DCC8]">
-                            <label className="block text-sm font-bold text-[#8C7A6B]">貨幣及匯率</label>
-                            <div className="flex space-x-2">
-                                <select value={currency} onChange={handleCurrencyChange} className="w-1/3 p-3 border-2 border-[#E6DCC8] rounded-xl bg-white outline-none text-[#5C4033]">
-                                    {CURRENCIES.map(c => <option key={c.code} value={c.code}>{c.name}</option>)}
-                                </select>
-                                {currency !== 'HKD' && (
-                                    <div className="flex-1 flex items-center space-x-2 border-2 border-[#E6DCC8] rounded-xl px-3 bg-white">
-                                        <span className="text-[#8C7A6B] text-sm whitespace-nowrap font-medium">匯率 x</span>
-                                        <input type="number" step="0.000001" value={rate} onChange={e => setRate(e.target.value)} className="w-full bg-transparent outline-none py-3 text-[#5C4033] font-medium" />
+                            {/* Q3 */}
+                            <div className="font-courier font-bold bg-ink/5 p-3 border border-ink border-dashed">
+                                <label className="block text-ink mb-2">貨幣及匯率：</label>
+                                <div className="flex space-x-2 text-base">
+                                    <select value={currency} onChange={e => {
+                                        setCurrency(e.target.value);
+                                        const c = CURRENCIES.find(x => x.code === e.target.value);
+                                        if (c) setRate(c.rate);
+                                    }} className="w-1/3 bg-transparent border-b-2 border-ink outline-none text-ink">
+                                        {CURRENCIES.map(c => <option key={c.code} value={c.code} className="bg-paper">{c.code} {c.name}</option>)}
+                                    </select>
+                                    {currency !== 'HKD' && (
+                                        <div className="flex-1 flex items-center border-b-2 border-ink">
+                                            <span className="text-ink whitespace-nowrap">匯率 x</span>
+                                            <input type="number" step="0.000001" value={rate} onChange={e => setRate(e.target.value)} className="w-full bg-transparent outline-none px-2 text-ink" />
+                                        </div>
+                                    )}
+                                </div>
+                                {currency !== 'HKD' && amount && <p className="text-right text-blood mt-2">約 HK$ {(parseFloat(amount) * rate).toFixed(1)}</p>}
+                            </div>
+
+                            {/* Q4 */}
+                            <div className="space-y-4 font-courier font-bold">
+                                <div>
+                                    <div className="flex justify-between items-end border-b border-ink/30 pb-1 mb-2">
+                                        <label className="text-ink">誰墊付賞金？ (債主)</label>
+                                        <button onClick={() => setPayers([...validFriends])} className="text-xs border border-ink px-2 py-0.5 active:bg-ink active:text-paper">全員</button>
                                     </div>
-                                )}
-                            </div>
-                            {currency !== 'HKD' && amount && (
-                                <p className="text-right text-sm text-[#C86F5E] font-bold mt-2">
-                                    約 HK$ {(parseFloat(amount) * rate).toFixed(1)}
-                                </p>
-                            )}
-                        </div>
-
-                        {/* Q4: Payers */}
-                        <div className="bg-[#FCFAF8] p-5 rounded-2xl shadow-sm border border-[#E6DCC8]">
-                            <div className="flex justify-between items-center mb-3">
-                                <label className="block text-sm font-bold text-[#8C7A6B]">邊個出錢？ (金主)</label>
-                                <button onClick={() => selectAll(setPayers)} className="text-xs text-[#C86F5E] font-bold bg-[#F5E6E3] px-3 py-1 rounded-full">所有人夾</button>
-                            </div>
-                            <div className="grid grid-cols-2 gap-2">
-                                {validFriends.map(f => (
-                                    <div key={f} onClick={() => toggleSelection(f, payers, setPayers)} className={`flex items-center p-3 rounded-xl border-2 transition-colors font-medium ${payers.includes(f) ? 'border-[#C86F5E] bg-[#F5E6E3] text-[#A85A4A]' : 'border-[#E6DCC8] bg-white text-[#8C7A6B]'}`}>
-                                        {payers.includes(f) ? <IconCheckCircle2 size={18} className="mr-2 text-[#C86F5E]" /> : <IconCircle size={18} className="mr-2 text-[#E6DCC8]" />}
-                                        <span className="truncate">{f}</span>
-                                    </div>
-                                ))}
-                            </div>
-                        </div>
-
-                        {/* Splitters */}
-                        <div className="bg-[#FCFAF8] p-5 rounded-2xl shadow-sm border border-[#E6DCC8]">
-                            <div className="flex justify-between items-center mb-3">
-                                <label className="block text-sm font-bold text-[#8C7A6B] leading-tight w-2/3">邊啲人要分擔？<br/><span className="text-xs font-normal text-[#A89F91]">(如有朋友被請客，請取消剔選)</span></label>
-                                <button onClick={() => selectAll(setSplitters)} className="text-xs text-[#8DA399] font-bold bg-[#EAF0EB] px-3 py-1 rounded-full">全選</button>
-                            </div>
-                            <div className="grid grid-cols-2 gap-2">
-                                {validFriends.map(f => (
-                                    <div key={f} onClick={() => toggleSelection(f, splitters, setSplitters)} className={`flex items-center p-3 rounded-xl border-2 transition-colors font-medium ${splitters.includes(f) ? 'border-[#8DA399] bg-[#EAF0EB] text-[#5C7267]' : 'border-[#E6DCC8] bg-white text-[#8C7A6B]'}`}>
-                                         {splitters.includes(f) ? <IconCheckCircle2 size={18} className="mr-2 text-[#8DA399]" /> : <IconCircle size={18} className="mr-2 text-[#E6DCC8]" />}
-                                        <span className="truncate">{f}</span>
-                                    </div>
-                                ))}
-                            </div>
-                        </div>
-
-                        <button onClick={handleSave} className="w-full py-4 bg-[#C86F5E] text-white rounded-xl font-bold text-lg shadow-[0_4px_0_#A85A4A] active:translate-y-1 active:shadow-none transition-all">
-                            儲存此筆紀錄
-                        </button>
-                    </div>
-                );
-            };
-
-            // 3. 明細介面
-            const ExpenseList = () => {
-                const deleteExpense = (id) => {
-                    setExpenses(expenses.filter(e => e.id !== id));
-                };
-
-                if (expenses.length === 0) {
-                    return <div className="p-4 text-center text-[#CBBBA0] mt-16 flex flex-col items-center"><span className="text-6xl mb-4">🌵</span>暫時未有支出紀錄。</div>;
-                }
-
-                return (
-                    <div className="p-4 pb-24 pt-safe">
-                        <h2 className="text-2xl font-bold mb-4 text-[#5C4033]">📜 帳單明細</h2>
-                        
-                        <div className="overflow-x-auto bg-[#FCFAF8] rounded-xl shadow-sm border border-[#E6DCC8]">
-                            <table className="w-full text-sm text-left">
-                                <thead className="bg-[#F5F1E7] text-[#8C7A6B] font-bold border-b border-[#E6DCC8]">
-                                    <tr>
-                                        <th className="p-3 whitespace-nowrap min-w-[120px]">項目</th>
-                                        <th className="p-3 whitespace-nowrap text-right">總額 (HKD)</th>
+                                    <div className="grid grid-cols-2 gap-2 text-sm">
                                         {validFriends.map(f => (
-                                            <th key={f} className="p-3 text-center whitespace-nowrap min-w-[80px] border-l border-[#E6DCC8] bg-[#F5F1E7]/50">{f}</th>
+                                            <div key={f} onClick={() => toggleSel(f, payers, setPayers)} className={`flex items-center p-2 border-2 cursor-pointer ${payers.includes(f) ? 'border-ink bg-ink text-paper' : 'border-ink/30 text-ink/70'}`}>
+                                                {payers.includes(f) ? <IconSquareCheck size={16} /> : <IconSquare size={16} />}
+                                                <span className="ml-2 truncate">{f}</span>
+                                            </div>
                                         ))}
-                                        <th className="p-3"></th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    {expenses.map((exp, idx) => {
-                                        const sharePerPerson = exp.splitters.length > 0 ? (exp.hkdAmount / exp.splitters.length) : 0;
-                                        
-                                        return (
-                                            <tr key={exp.id} className={`border-b border-[#E6DCC8] last:border-0 ${idx % 2 === 0 ? 'bg-white' : 'bg-[#FCFAF8]'}`}>
-                                                <td className="p-3">
-                                                    <div className="font-bold text-[#5C4033]">{exp.desc}</div>
-                                                    <div className="text-xs text-[#A89F91] mt-1 flex flex-col font-medium">
-                                                        <span>金主: {exp.payers.join(', ')}</span>
-                                                        {exp.currency !== 'HKD' && <span>{exp.currency} {exp.amount} (率:{exp.rate})</span>}
-                                                    </div>
-                                                </td>
-                                                <td className="p-3 text-right font-black text-[#C86F5E]">
-                                                    ${exp.hkdAmount.toFixed(1)}
-                                                </td>
-                                                {validFriends.map(f => (
-                                                    <td key={f} className="p-3 text-center border-l border-[#E6DCC8] text-[#8C7A6B] font-medium">
-                                                        {exp.splitters.includes(f) ? `$${sharePerPerson.toFixed(1)}` : <span className="text-[#DCD3C6]">-</span>}
-                                                    </td>
-                                                ))}
-                                                <td className="p-3 text-center">
-                                                    <button onClick={() => deleteExpense(exp.id)} className="text-[#D9534F] hover:text-red-700">
-                                                        <IconTrash2 size={18} />
-                                                    </button>
-                                                </td>
-                                            </tr>
-                                        );
-                                    })}
-                                </tbody>
-                            </table>
+                                    </div>
+                                </div>
+
+                                <div>
+                                    <div className="flex justify-between items-end border-b border-ink/30 pb-1 mb-2">
+                                        <label className="text-ink">誰需要分擔？ (欠債人)</label>
+                                        <button onClick={() => setSplitters([...validFriends])} className="text-xs border border-ink px-2 py-0.5 active:bg-ink active:text-paper">全員</button>
+                                    </div>
+                                    <div className="grid grid-cols-2 gap-2 text-sm">
+                                        {validFriends.map(f => (
+                                            <div key={f} onClick={() => toggleSel(f, splitters, setSplitters)} className={`flex items-center p-2 border-2 cursor-pointer ${splitters.includes(f) ? 'border-ink text-ink font-black bg-ink/10' : 'border-ink/30 text-ink/50'}`}>
+                                                {splitters.includes(f) ? <IconSquareCheck size={16} /> : <IconSquare size={16} />}
+                                                <span className="ml-2 truncate">{f}</span>
+                                            </div>
+                                        ))}
+                                    </div>
+                                </div>
+                            </div>
+
+                            <button onClick={handleSave} className="mt-4 font-rye text-2xl bg-ink text-paper py-4 w-full shadow-[4px_4px_0_#2A1A14] active:translate-y-1 active:shadow-none transition-all border-2 border-ink">
+                                釘上通緝令 (儲存)
+                            </button>
                         </div>
                     </div>
                 );
             };
 
-            // 4. 結算總結介面
-            const Summary = () => {
-                const { transactions } = useMemo(() => getSettlement(expenses, validFriends), [expenses, validFriends]);
-
-                const handleSaveToHistory = () => {
-                    if (expenses.length === 0) return;
-                    setSaveName(`西部探險 ${new Date().toLocaleDateString()}`);
-                    setShowSaveModal(true);
-                };
-
+            const renderExpenseList = () => {
+                // 防呆：未有帳單時顯示引導
                 if (expenses.length === 0) {
-                    return <div className="p-4 text-center text-[#CBBBA0] mt-16 flex flex-col items-center"><span className="text-6xl mb-4">🐴</span>未有帳單可供結算。</div>;
+                    return renderEmptyState("NO CRIMES YET!", "目前沒有任何懸賞紀錄明細。\n請先去發佈懸賞令吧！", "前往「懸賞」記帳 ➔", "add");
                 }
 
                 return (
-                    <div className="p-4 pb-24 space-y-6 pt-safe">
-                        <h2 className="text-2xl font-bold text-[#5C4033]">🤝 結算結果</h2>
+                    <div className="wanted-poster m-4 p-4 mt-8 pb-8">
+                        <Pins />
+                        <div className="wanted-inner-border p-2 h-full">
+                            <h2 className="font-rye text-2xl text-center text-ink border-b-[3px] border-ink pb-2 mb-4">CRIME LOG (帳單明細)</h2>
+                            
+                            <div className="overflow-x-auto">
+                                <table className="w-full text-left font-courier text-ink border-collapse">
+                                    <thead className="border-b-2 border-ink">
+                                        <tr>
+                                            <th className="p-2 whitespace-nowrap font-bold">項目</th>
+                                            <th className="p-2 whitespace-nowrap text-right font-bold">總額(HKD)</th>
+                                            {validFriends.map(f => <th key={f} className="p-2 text-center whitespace-nowrap border-l border-ink/30 text-sm">{f}</th>)}
+                                            <th className="p-2"></th>
+                                        </tr>
+                                    </thead>
+                                    <tbody className="text-sm font-bold">
+                                        {expenses.map((exp, idx) => {
+                                            const share = exp.splitters.length > 0 ? (exp.hkdAmount / exp.splitters.length) : 0;
+                                            return (
+                                                <tr key={exp.id} className="border-b border-ink/30 border-dashed">
+                                                    <td className="p-2">
+                                                        <div className="text-base uppercase">{exp.desc}</div>
+                                                        <div className="text-[10px] text-ink/70">
+                                                            由 {exp.payers.join(',')} 墊付
+                                                            {exp.currency !== 'HKD' && <br/>}
+                                                            {exp.currency !== 'HKD' && `${exp.currency} ${exp.amount}`}
+                                                        </div>
+                                                    </td>
+                                                    <td className="p-2 text-right font-black text-blood text-base">
+                                                        ${exp.hkdAmount.toFixed(1)}
+                                                    </td>
+                                                    {validFriends.map(f => (
+                                                        <td key={f} className="p-2 text-center border-l border-ink/30">
+                                                            {exp.splitters.includes(f) ? `$${share.toFixed(1)}` : '-'}
+                                                        </td>
+                                                    ))}
+                                                    <td className="p-2 text-center">
+                                                        <button onClick={() => setExpenses(expenses.filter(e => e.id !== exp.id))} className="text-blood active:scale-90">
+                                                            <IconTrash size={18} />
+                                                        </button>
+                                                    </td>
+                                                </tr>
+                                            );
+                                        })}
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                );
+            };
 
-                        <div className="bg-[#FCFAF8] p-5 rounded-2xl shadow-sm border border-[#E6DCC8]">
-                            <h3 className="text-lg font-bold text-[#8C7A6B] mb-4 border-b border-[#E6DCC8] pb-3">最簡潔還款方案</h3>
-                            {transactions.length === 0 ? (
-                                <p className="text-[#8DA399] text-center font-bold py-6 text-lg">完美！沒有人欠任何人錢。</p>
-                            ) : (
-                                <div className="space-y-3">
-                                    {transactions.map((t, idx) => (
-                                        <div key={idx} className="flex items-center justify-between bg-white p-4 rounded-xl border border-[#E6DCC8]">
-                                            <div className="flex items-center space-x-2">
-                                                <span className="font-bold text-[#D9534F] text-lg">{t.from}</span>
-                                                <span className="text-[#A89F91] text-sm">應付給</span>
-                                                <span className="font-bold text-[#8DA399] text-lg">{t.to}</span>
+            const renderSummary = () => {
+                // 防呆：第四頁結算時，若未有帳單則引導記帳
+                if (expenses.length === 0) {
+                    return renderEmptyState("NO CRIMES YET!", "天下太平！目前沒有懸賞資料可供結算。\n請先去發佈懸賞令吧！", "前往「懸賞」記帳 ➔", "add");
+                }
+
+                const { transactions } = getSettlement(expenses, validFriends);
+
+                return (
+                    <div className="wanted-poster m-4 p-4 mt-8 pb-8">
+                        <Pins />
+                        <div className="wanted-inner-border p-4 h-full">
+                            <h2 className="font-rye text-4xl text-center text-ink border-b-[4px] border-double border-ink pb-2 mb-6">REWARD<br/><span className="text-xl tracking-widest">賞金分配 (結算)</span></h2>
+
+                            <div className="font-courier font-bold text-ink space-y-4">
+                                {transactions.length === 0 ? (
+                                    <p className="text-center text-xl py-6 border-y border-dashed border-ink">無人虧欠，天下太平。</p>
+                                ) : (
+                                    transactions.map((t, idx) => (
+                                        <div key={idx} className="flex flex-col border-[3px] border-ink p-3 relative bg-ink/5">
+                                            <div className="flex justify-between items-center mb-1">
+                                                <span className="text-sm text-ink/70 uppercase tracking-wider">Wanted From</span>
+                                                <span className="text-sm text-ink/70 uppercase tracking-wider">Pay To</span>
                                             </div>
-                                            <div className="text-xl font-black text-[#5C4033]">
-                                                HK$ {t.amount.toFixed(1)}
+                                            <div className="flex justify-between items-center text-xl">
+                                                <span className="font-black text-blood">{t.from}</span>
+                                                <span className="text-xl">➔</span>
+                                                <span className="font-black text-ink">{t.to}</span>
+                                            </div>
+                                            <div className="text-center mt-2 border-t-2 border-ink border-dashed pt-2">
+                                                <span className="font-rye text-3xl tracking-widest">HK$ {t.amount.toFixed(1)}</span>
                                             </div>
                                         </div>
-                                    ))}
-                                </div>
-                            )}
-                        </div>
+                                    ))
+                                )}
+                            </div>
 
-                        <button onClick={handleSaveToHistory} className="w-full py-4 bg-[#8DA399] text-white rounded-xl font-bold text-lg shadow-[0_4px_0_#72857C] active:translate-y-1 active:shadow-none transition-all">
-                            儲存本次結算至紀錄
-                        </button>
+                            <button onClick={() => { setSaveName(`懸賞任務 ${new Date().toLocaleDateString()}`); setShowSaveModal(true); }} className="mt-8 font-rye text-xl bg-ink text-paper py-4 w-full shadow-[4px_4px_0_#2A1A14] active:translate-y-1 active:shadow-none transition-all">
+                                封存檔案 (儲存紀錄)
+                            </button>
+                        </div>
                     </div>
                 );
             };
 
-            // 5. 歷史紀錄 & 匯出介面
-            const HistoryTab = () => {
+            const renderHistoryTab = () => {
                 const exportToExcel = (record) => {
-                    let csvContent = "\uFEFF";
-                    csvContent += `旅程名稱:,${record.name}\n`;
-                    csvContent += `日期:,${record.date}\n\n`;
-                    
-                    csvContent += "項目,外幣金額,貨幣,匯率,總額 (HKD),出錢人 (金主),分擔人\n";
-                    
+                    let csv = "\uFEFF旅程名稱:," + record.name + "\n日期:," + record.date + "\n\n項目,外幣,貨幣,匯率,總額(HKD),墊付人,分擔人\n";
                     record.expenses.forEach(exp => {
-                        const desc = `"${exp.desc.replace(/"/g, '""')}"`;
-                        const payers = `"${exp.payers.join(', ')}"`;
-                        const splitters = `"${exp.splitters.join(', ')}"`;
-                        
-                        csvContent += `${desc},${exp.amount},${exp.currency},${exp.rate},${exp.hkdAmount.toFixed(2)},${payers},${splitters}\n`;
+                        csv += `"${exp.desc}",${exp.amount},${exp.currency},${exp.rate},${exp.hkdAmount.toFixed(2)},"${exp.payers.join(',')}","${exp.splitters.join(',')}"\n`;
                     });
-
-                    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-                    
-                    // 相容 iOS Safari 的下載方式
-                    if (window.navigator && window.navigator.msSaveOrOpenBlob) {
-                        window.navigator.msSaveOrOpenBlob(blob, `${record.name}_拆帳明細.csv`);
-                    } else {
+                    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+                    if (navigator.msSaveOrOpenBlob) navigator.msSaveOrOpenBlob(blob, `${record.name}.csv`);
+                    else {
                         const link = document.createElement("a");
-                        const url = URL.createObjectURL(blob);
-                        link.setAttribute("href", url);
-                        link.setAttribute("download", `${record.name}_拆帳明細.csv`);
+                        link.href = URL.createObjectURL(blob);
+                        link.download = `${record.name}_拆帳明細.csv`;
                         link.style.display = 'none';
-                        document.body.appendChild(link);
-                        link.click();
-                        document.body.removeChild(link);
-                        URL.revokeObjectURL(url);
+                        document.body.appendChild(link); link.click(); document.body.removeChild(link);
                     }
-
-                    const updatedHistory = history.map(h => 
-                        h.id === record.id ? { ...h, isExported: true } : h
-                    );
-                    setHistory(updatedHistory);
-                };
-
-                const deleteRecord = (id) => {
-                    setDeleteConfirm(id);
+                    setHistory(history.map(h => h.id === record.id ? { ...h, isExported: true } : h));
                 };
 
                 if (history.length === 0) {
-                    return <div className="p-4 text-center text-[#CBBBA0] mt-16 flex flex-col items-center"><span className="text-6xl mb-4">⛺</span>暫時未有歷史紀錄。</div>;
+                    return renderEmptyState("NO ARCHIVES!", "警長辦公室目前沒有任何檔案。\n請完成記帳後，再前往「結算」封存檔案。", "前往「結算」封存 ➔", "summary");
                 }
 
                 return (
-                    <div className="p-4 pb-24 pt-safe">
-                        <h2 className="text-2xl font-bold mb-4 text-[#5C4033]">📖 歷史紀錄與匯出</h2>
+                    <div className="m-4 pb-24 space-y-6 pt-safe">
+                        <h2 className="font-rye text-3xl text-center text-paper border-b-2 border-paper pb-2 tracking-widest">ARCHIVES (歷史檔案)</h2>
                         
-                        <div className="space-y-4">
-                            {history.map(record => {
-                                const recordTransactions = record.transactions || getSettlement(record.expenses, record.friends).transactions;
-                                return (
-                                    <div key={record.id} className="bg-[#FCFAF8] p-5 rounded-2xl shadow-sm border border-[#E6DCC8]">
-                                        <div className="flex justify-between items-start mb-4">
+                        {history.map(record => {
+                            const recTrans = record.transactions || getSettlement(record.expenses, record.friends).transactions;
+                            return (
+                                <div key={record.id} className="wanted-poster p-3 mt-4">
+                                    <Pins />
+                                    <div className="wanted-inner-border p-3 font-courier text-ink">
+                                        <div className="flex justify-between items-start border-b-2 border-ink border-dashed pb-2 mb-2">
                                             <div>
-                                                <div className="flex items-center space-x-2">
-                                                    <h3 className="font-bold text-xl text-[#5C4033]">{record.name}</h3>
-                                                    {record.isExported && (
-                                                        <span className="bg-[#EAF0EB] text-[#5C7267] text-[10px] px-2 py-0.5 rounded-full font-bold border border-[#8DA399]/30">已匯出</span>
-                                                    )}
-                                                </div>
-                                                <p className="text-xs text-[#A89F91] mt-1">{record.date}</p>
+                                                <h3 className="font-rye text-2xl uppercase">{record.name}</h3>
+                                                <p className="text-xs font-bold">{record.date}</p>
                                             </div>
-                                            <button onClick={() => deleteRecord(record.id)} className="text-[#D9534F] p-2 hover:bg-[#FCECEB] rounded-full transition-colors">
-                                                <IconTrash2 size={20} />
-                                            </button>
+                                            <button onClick={() => setDeleteConfirm(record.id)} className="text-blood"><IconTrash size={24}/></button>
                                         </div>
-                                        <p className="text-sm text-[#8C7A6B] mb-4 font-medium border-l-2 border-[#C86F5E] pl-2">
-                                            共 {record.expenses.length} 筆項目 <br/>參與者：{record.friends.join(', ')}
-                                        </p>
+                                        <p className="text-sm font-bold mb-3">參與者: {record.friends.join(', ')} <br/> 共 {record.expenses.length} 筆懸賞</p>
                                         
-                                        {/* 結算明細區塊 */}
-                                        <div className="mb-5 bg-white p-3 rounded-xl border border-[#E6DCC8]">
-                                            <h4 className="text-xs font-bold text-[#8C7A6B] mb-2 border-b border-[#E6DCC8] pb-1">結算明細</h4>
-                                            {recordTransactions.length === 0 ? (
-                                                <p className="text-[#8DA399] text-sm font-bold py-1">沒有人欠任何人錢。</p>
-                                            ) : (
-                                                <div className="space-y-2">
-                                                    {recordTransactions.map((t, idx) => (
-                                                        <div key={idx} className="flex items-center justify-between text-sm bg-[#FCFAF8] p-2 rounded-lg border border-[#F5F1E7]">
-                                                            <div className="flex items-center space-x-1.5">
-                                                                <span className="font-bold text-[#D9534F]">{t.from}</span>
-                                                                <span className="text-[#A89F91] text-xs">應付給</span>
-                                                                <span className="font-bold text-[#8DA399]">{t.to}</span>
-                                                            </div>
-                                                            <div className="font-black text-[#5C4033]">
-                                                                ${t.amount.toFixed(1)}
-                                                            </div>
+                                        <div className="bg-ink/5 border border-ink p-2 mb-4">
+                                            <h4 className="font-rye text-sm mb-1 border-b border-ink/30 pb-1">結算結果</h4>
+                                            {recTrans.length === 0 ? <p className="text-xs font-bold">無債務。</p> : (
+                                                <div className="space-y-1 text-sm font-bold">
+                                                    {recTrans.map((t, idx) => (
+                                                        <div key={idx} className="flex justify-between border-b border-ink/10 last:border-0 pb-1 mb-1">
+                                                            <span><span className="text-blood">{t.from}</span> 給 {t.to}</span>
+                                                            <span className="font-black">${t.amount.toFixed(1)}</span>
                                                         </div>
                                                     ))}
                                                 </div>
                                             )}
                                         </div>
                                         
-                                        <button 
-                                            onClick={() => exportToExcel(record)}
-                                            className={`w-full py-3 rounded-xl font-bold flex items-center justify-center space-x-2 transition-colors ${record.isExported ? 'bg-white text-[#A89F91] border-2 border-[#E6DCC8]' : 'bg-[#FCFAF8] text-[#5C4033] border-2 border-[#5C4033]'}`}
-                                        >
-                                            <IconDownload size={18} />
-                                            <span>{record.isExported ? '重新匯出 Excel' : '匯出為 Excel (CSV)'}</span>
+                                        <button onClick={() => exportToExcel(record)} className={`w-full py-3 border-[3px] font-bold flex justify-center items-center font-sans transition-colors ${record.isExported ? 'border-ink/50 text-ink/70' : 'border-ink text-ink bg-ink/10 active:bg-ink active:text-paper'}`}>
+                                            {record.isExported ? '✔ 已匯出 Excel (再次下載)' : '匯出 Excel (CSV)'}
                                         </button>
                                     </div>
-                                );
-                            })}
-                        </div>
+                                </div>
+                            );
+                        })}
                     </div>
                 );
             };
 
-            // --- Modal 執行函數 ---
             const executeSaveToHistory = () => {
-                if (!saveName.trim()) {
-                    setErrorMessage("請輸入紀錄名稱");
-                    return;
-                }
-                const { transactions } = getSettlement(expenses, validFriends);
-                const newRecord = {
-                    id: Date.now(),
-                    name: saveName,
-                    date: new Date().toLocaleString(),
-                    expenses: [...expenses],
-                    friends: [...validFriends],
-                    transactions: transactions
-                };
-                setHistory([newRecord, ...history]);
-                setExpenses([]);
-                setShowSaveModal(false);
-                setActiveTab('history');
+                if (!saveName.trim()) return setErrorMessage("請輸入檔案名稱");
+                setHistory([{
+                    id: Date.now(), name: saveName, date: new Date().toLocaleString(),
+                    expenses: [...expenses], friends: [...validFriends], transactions: getSettlement(expenses, validFriends).transactions
+                }, ...history]);
+                setExpenses([]); setShowSaveModal(false); setActiveTab('history');
             };
 
-            const executeDeleteRecord = () => {
-                setHistory(history.filter(h => h.id !== deleteConfirm));
-                setDeleteConfirm(null);
-            };
-
-            // --- 主渲染 ---
+            // ==========================================
+            // 主要渲染
+            // ==========================================
             return (
-                <div className="min-h-screen bg-[#F5F1E7] pb-safe selection:bg-[#C86F5E]/20">
-                    {/* 頂部標題 */}
-                    <div className="bg-[#EEDBCE] pt-safe pb-4 px-4 shadow-sm sticky top-0 z-10 border-b-4 border-[#C86F5E]/10">
-                        <h1 className="text-xl font-black text-center text-[#5C4033] tracking-wider mt-4">🤠 西部牛仔拆賬簿</h1>
+                <div className="min-h-screen pb-safe font-sans">
+                    <div className="max-w-md mx-auto w-full pt-safe">
+                        {/* 根據 activeTab 直接呼叫渲染函數，保證不 Unmount */}
+                        {activeTab === 'friends' && renderFriendsSetup()}
+                        {activeTab === 'add' && renderAddExpense()}
+                        {activeTab === 'list' && renderExpenseList()}
+                        {activeTab === 'summary' && renderSummary()}
+                        {activeTab === 'history' && renderHistoryTab()}
                     </div>
 
-                    {/* 內容區 */}
-                    <div className="max-w-md mx-auto w-full">
-                        {activeTab === 'friends' && <FriendsSetup />}
-                        {activeTab === 'add' && <AddExpense />}
-                        {activeTab === 'list' && <ExpenseList />}
-                        {activeTab === 'summary' && <Summary />}
-                        {activeTab === 'history' && <HistoryTab />}
-                    </div>
-
-                    {/* 底部導航列 */}
-                    <div className="fixed bottom-0 left-0 right-0 bg-[#FCFAF8] border-t-2 border-[#E6DCC8] pb-safe pt-2 px-1 shadow-[0_-4px_10px_-1px_rgba(92,64,51,0.05)] z-20">
+                    {/* 底部導航列 (木紋風) */}
+                    <div className="fixed bottom-0 left-0 right-0 bg-[#1A100C] border-t-4 border-[#3E2723] pb-safe pt-2 px-1 z-20 shadow-[0_-5px_15px_rgba(0,0,0,0.8)]">
                         <div className="max-w-md mx-auto flex justify-between items-center">
-                            <button onClick={() => setActiveTab('friends')} className={`flex flex-col items-center p-2 flex-1 transition-colors ${activeTab === 'friends' ? 'text-[#C86F5E]' : 'text-[#A89F91]'}`}>
-                                <IconUsers />
-                                <span className="text-[10px] font-bold mt-1">1.夥伴</span>
-                            </button>
-                            <button onClick={() => setActiveTab('add')} className={`flex flex-col items-center p-2 flex-1 transition-colors ${activeTab === 'add' ? 'text-[#C86F5E]' : 'text-[#A89F91]'}`}>
-                                <IconPlusCircle />
-                                <span className="text-[10px] font-bold mt-1">2.記帳</span>
-                            </button>
-                            <button onClick={() => setActiveTab('list')} className={`flex flex-col items-center p-2 flex-1 transition-colors ${activeTab === 'list' ? 'text-[#C86F5E]' : 'text-[#A89F91]'}`}>
-                                <IconList />
-                                <span className="text-[10px] font-bold mt-1">3.明細</span>
-                            </button>
-                            <button onClick={() => setActiveTab('summary')} className={`flex flex-col items-center p-2 flex-1 transition-colors ${activeTab === 'summary' ? 'text-[#C86F5E]' : 'text-[#A89F91]'}`}>
-                                <IconCalculator />
-                                <span className="text-[10px] font-bold mt-1">4.結算</span>
-                            </button>
-                            <button onClick={() => setActiveTab('history')} className={`flex flex-col items-center p-2 flex-1 transition-colors ${activeTab === 'history' ? 'text-[#C86F5E]' : 'text-[#A89F91]'}`}>
-                                <IconHistory />
-                                <span className="text-[10px] font-bold mt-1">5.紀錄</span>
-                            </button>
+                            {[{id:'friends', icon:IconUsers, label:'名單'}, {id:'add', icon:IconPlus, label:'懸賞'}, {id:'list', icon:IconList, label:'明細'}, {id:'summary', icon:IconBadge, label:'結算'}, {id:'history', icon:IconScroll, label:'檔案'}].map(tab => (
+                                <button key={tab.id} onClick={() => setActiveTab(tab.id)} className="flex flex-col items-center p-2 flex-1 transition-all">
+                                    {tab.icon({ color: activeTab === tab.id ? '#D4B872' : '#5C4335' })}
+                                    <span className={`text-[10px] font-bold mt-1 font-courier uppercase ${activeTab === tab.id ? 'text-[#D4B872]' : 'text-[#5C4335]'}`}>{tab.label}</span>
+                                </button>
+                            ))}
                         </div>
                     </div>
 
-                    {/* 提示訊息 Modal */}
+                    {/* Modals */}
                     {errorMessage && (
-                        <div className="fixed inset-0 bg-[#5C4033]/60 flex items-center justify-center z-50 p-4 backdrop-blur-sm">
-                            <div className="bg-[#FCFAF8] rounded-3xl p-6 max-w-sm w-full shadow-2xl border-4 border-[#EEDBCE]">
-                                <h3 className="text-xl font-black text-[#5C4033] mb-2 flex items-center gap-2">⚠️ 提示</h3>
-                                <p className="text-[#8C7A6B] mb-6 font-medium">{errorMessage}</p>
-                                <button onClick={() => setErrorMessage('')} className="w-full py-3 bg-[#C86F5E] text-white rounded-xl font-bold shadow-[0_4px_0_#A85A4A] active:translate-y-1 active:shadow-none transition-all">
-                                    知道了
-                                </button>
-                            </div>
-                        </div>
-                    )}
-
-                    {/* 儲存紀錄 Modal */}
-                    {showSaveModal && (
-                        <div className="fixed inset-0 bg-[#5C4033]/60 flex items-center justify-center z-50 p-4 backdrop-blur-sm">
-                            <div className="bg-[#FCFAF8] rounded-3xl p-6 max-w-sm w-full shadow-2xl border-4 border-[#EEDBCE]">
-                                <h3 className="text-xl font-black text-[#5C4033] mb-4">💾 儲存結算紀錄</h3>
-                                <p className="text-sm font-bold text-[#8C7A6B] mb-2">請為這次旅程命名：</p>
-                                <input 
-                                    type="text" 
-                                    value={saveName} 
-                                    onChange={(e) => setSaveName(e.target.value)}
-                                    className="w-full p-3 border-2 border-[#E6DCC8] bg-white rounded-xl outline-none focus:border-[#C86F5E] mb-6 text-[#5C4033] font-bold"
-                                    placeholder="例如：西部牛仔之旅"
-                                />
-                                <div className="flex space-x-3">
-                                    <button onClick={() => setShowSaveModal(false)} className="flex-1 py-3 bg-white border-2 border-[#E6DCC8] text-[#8C7A6B] rounded-xl font-bold active:bg-[#F5F1E7]">
-                                        取消
-                                    </button>
-                                    <button onClick={executeSaveToHistory} className="flex-1 py-3 bg-[#8DA399] text-white rounded-xl font-bold shadow-[0_4px_0_#72857C] active:translate-y-1 active:shadow-none transition-all">
-                                        確認儲存
-                                    </button>
+                        <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-50 p-4">
+                            <div className="wanted-poster p-2 w-full max-w-sm">
+                                <div className="wanted-inner-border p-4 text-center">
+                                    <h3 className="font-rye text-3xl text-blood mb-2">WARNING</h3>
+                                    <p className="font-courier font-bold text-ink mb-6 text-lg">{errorMessage}</p>
+                                    <button onClick={() => setErrorMessage('')} className="font-rye text-xl bg-ink text-paper py-3 w-full border-2 border-ink active:translate-y-1 transition-all">我知道了</button>
                                 </div>
                             </div>
                         </div>
                     )}
 
-                    {/* 刪除確認 Modal */}
+                    {showGroupModal && (
+                        <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-50 p-4">
+                            <div className="wanted-poster p-2 w-full max-w-sm">
+                                <div className="wanted-inner-border p-6 text-center font-courier">
+                                    <h3 className="font-rye text-3xl text-ink mb-4 border-b-2 border-ink border-dashed pb-2">新增幫派</h3>
+                                    <p className="text-sm text-ink mb-4 font-bold">將目前的同伙名單儲存為常用幫派</p>
+                                    <input type="text" value={groupName} onChange={e => setGroupName(e.target.value)} className="w-full bg-transparent border-b-2 border-ink outline-none text-xl py-2 text-ink font-bold text-center mb-6 focus:bg-ink/5" placeholder="幫派名稱 (如: 尋寶小隊)" />
+                                    <div className="flex space-x-3 font-rye text-lg">
+                                        <button onClick={() => setShowGroupModal(false)} className="flex-1 border-[3px] border-ink text-ink py-2 active:bg-ink/10">取消</button>
+                                        <button onClick={() => {
+                                            if(!groupName.trim()) return setErrorMessage("請輸入幫派名稱");
+                                            setSavedGroups([...savedGroups, { id: Date.now(), name: groupName, members: validFriends }]);
+                                            setShowGroupModal(false);
+                                            setGroupName('');
+                                        }} className="flex-1 bg-ink border-[3px] border-ink text-paper py-2 active:bg-[#2A1A14]">儲存</button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    )}
+
+                    {showSaveModal && (
+                        <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-50 p-4">
+                            <div className="wanted-poster p-2 w-full max-w-sm">
+                                <div className="wanted-inner-border p-6 text-center font-courier">
+                                    <h3 className="font-rye text-3xl text-ink mb-4 border-b-2 border-ink border-dashed pb-2">檔案命名</h3>
+                                    <input type="text" value={saveName} onChange={e => setSaveName(e.target.value)} className="w-full bg-transparent border-b-2 border-ink outline-none text-xl py-2 text-ink font-bold text-center mb-6 focus:bg-ink/5" placeholder="檔案名稱" />
+                                    <div className="flex space-x-3 font-rye text-lg">
+                                        <button onClick={() => setShowSaveModal(false)} className="flex-1 border-[3px] border-ink text-ink py-2 active:bg-ink/10">取消</button>
+                                        <button onClick={executeSaveToHistory} className="flex-1 bg-ink border-[3px] border-ink text-paper py-2 active:bg-[#2A1A14]">封存</button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    )}
+
                     {deleteConfirm && (
-                        <div className="fixed inset-0 bg-[#5C4033]/60 flex items-center justify-center z-50 p-4 backdrop-blur-sm">
-                            <div className="bg-[#FCFAF8] rounded-3xl p-6 max-w-sm w-full shadow-2xl border-4 border-[#EEDBCE]">
-                                <h3 className="text-xl font-black text-[#5C4033] mb-2">🗑️ 確認刪除</h3>
-                                <p className="text-[#8C7A6B] mb-6 font-medium">確定要刪除這筆紀錄嗎？此動作無法復原。</p>
-                                <div className="flex space-x-3">
-                                    <button onClick={() => setDeleteConfirm(null)} className="flex-1 py-3 bg-white border-2 border-[#E6DCC8] text-[#8C7A6B] rounded-xl font-bold active:bg-[#F5F1E7]">
-                                        取消
-                                    </button>
-                                    <button onClick={executeDeleteRecord} className="flex-1 py-3 bg-[#D9534F] text-white rounded-xl font-bold shadow-[0_4px_0_#A83A36] active:translate-y-1 active:shadow-none transition-all">
-                                        確認刪除
-                                    </button>
+                        <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-50 p-4">
+                            <div className="wanted-poster p-2 w-full max-w-sm">
+                                <div className="wanted-inner-border p-6 text-center">
+                                    <h3 className="font-rye text-3xl text-blood mb-4 border-b-2 border-blood border-dashed pb-2">銷毀檔案？</h3>
+                                    <p className="font-courier font-bold text-ink mb-8 text-lg">這份檔案將會被永遠燒毀，無法復原。</p>
+                                    <div className="flex space-x-3 font-rye text-lg">
+                                        <button onClick={() => setDeleteConfirm(null)} className="flex-1 border-[3px] border-ink text-ink py-2 active:bg-ink/10">保留</button>
+                                        <button onClick={() => { setHistory(history.filter(h => h.id !== deleteConfirm)); setDeleteConfirm(null); }} className="flex-1 bg-blood border-[3px] border-blood text-white py-2 active:bg-[#5a0000]">燒毀</button>
+                                    </div>
                                 </div>
                             </div>
                         </div>
@@ -735,5 +734,9 @@
     </script>
 </body>
 </html>
+
+
+
+
 
 ```
